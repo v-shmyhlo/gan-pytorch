@@ -48,7 +48,7 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     discriminator = ConvolutionalDiscriminator(args.latent_size)
     generator = ConvolutionalGenerator(args.latent_size)
-   
+
     discriminator.to(device)
     generator.to(device)
 
@@ -62,6 +62,8 @@ def main():
     for epoch in range(args.epochs):
         data_loader_iter = iter(data_loader)
 
+        discriminator.train()
+        generator.train()
         for _ in tqdm(range(len(data_loader) // args.discr_steps), desc='training'):
             # discriminator
             for _ in range(args.discr_steps):
