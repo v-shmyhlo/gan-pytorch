@@ -46,8 +46,12 @@ def main():
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvolutionalDiscriminator(args.latent_size).to(device)
-    generator = ConvolutionalGenerator(args.latent_size).to(device)
+    discriminator = ConvolutionalDiscriminator(args.latent_size)
+    generator = ConvolutionalGenerator(args.latent_size)
+   
+    discriminator.to(device)
+    generator.to(device)
+
     dist = torch.distributions.Normal(0, 1)
 
     discriminator_opt = torch.optim.Adam(discriminator.parameters(), lr=args.learning_rate, betas=(0.5, 0.999))
