@@ -19,7 +19,7 @@ def build_parser():
     # parser.add_argument('--restore-path', type=str)
     parser.add_argument('--dataset-path', type=str, default='./data')
     parser.add_argument('--learning-rate', type=float, default=5e-5)
-    parser.add_argument('--latent-size', type=int, default=32)
+    parser.add_argument('--latent-size', type=int, default=128)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--discr-steps', type=int, default=5)
     parser.add_argument('--discr-clamp', type=float, nargs=2, default=[-0.01, 0.01])
