@@ -8,7 +8,7 @@ import torch
 import logging
 from tqdm import tqdm
 from ticpfptp.format import args_to_string
-from ticpfptp.torch import fix_seed
+from ticpfptp.torch import fix_seed, save_model, load_weights
 from discriminator import Convolutional as ConvolutionalDiscriminator
 from generator import Convolutional as ConvolutionalGenerator
 from tensorboardX import SummaryWriter
@@ -16,12 +16,13 @@ from tensorboardX import SummaryWriter
 
 # TODO: spherical z
 # TODO: spherical interpolation
+# TODO: norm z
 
 
 def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment-path', type=str, default='./tf_log')
-    # parser.add_argument('--restore-path', type=str)
+    parser.add_argument('--restore-path', type=str)
     parser.add_argument('--dataset-path', type=str, default='./data')
     parser.add_argument('--learning-rate', type=float, default=5e-5)
     parser.add_argument('--latent-size', type=int, default=128)
@@ -92,6 +93,7 @@ def main():
 
                 # fake
                 noise = dist.sample((args.batch_size, args.latent_size)).to(device)
+                noise = noise / noise.norm(dim=-1, keepdim=True)
                 fake = generator(noise)
                 score = discriminator(fake)
                 (-score.mean()).backward()
@@ -103,6 +105,7 @@ def main():
 
             # generator
             noise = dist.sample((args.batch_size, args.latent_size)).to(device)
+            noise = noise / noise.norm(dim=-1, keepdim=True)
             fake = generator(noise)
             score = discriminator(fake)
 
