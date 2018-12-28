@@ -1,6 +1,7 @@
 import argparse
 import os
 import torchvision
+from ticpfptp.metrics import Mean
 from dataset import Dataset
 import torch.utils.data
 import torch
@@ -11,6 +12,10 @@ from ticpfptp.torch import fix_seed
 from discriminator import Convolutional as ConvolutionalDiscriminator
 from generator import Convolutional as ConvolutionalGenerator
 from tensorboardX import SummaryWriter
+
+
+# TODO: spherical z
+# TODO: spherical interpolation
 
 
 def build_parser():
@@ -58,6 +63,11 @@ def main():
     generator_opt = torch.optim.Adam(generator.parameters(), lr=args.learning_rate, betas=(0.5, 0.999))
 
     writer = SummaryWriter(args.experiment_path)
+    metrics = {
+        'score/real': Mean(),
+        'score/fake': Mean(),
+        'score/delta': Mean()
+    }
 
     for epoch in range(args.epochs):
         data_loader_iter = iter(data_loader)
@@ -77,14 +87,19 @@ def main():
                 real = real.to(device)
                 score = discriminator(real)
                 score.mean().backward()
+                metrics['score/real'].update(score.data.cpu().numpy())
+                score_real = score
 
                 # fake
                 noise = dist.sample((args.batch_size, args.latent_size)).to(device)
                 fake = generator(noise)
                 score = discriminator(fake)
                 (-score.mean()).backward()
+                metrics['score/fake'].update(score.data.cpu().numpy())
+                score_fake = score
 
                 discriminator_opt.step()
+                metrics['score/delta'].update((score_real - score_fake).data.cpu().numpy())
 
             # generator
             noise = dist.sample((args.batch_size, args.latent_size)).to(device)
@@ -95,6 +110,9 @@ def main():
             score.mean().backward()
             generator_opt.step()
 
+        writer.add_scalar('score/real', metrics['score/real'].compute_and_reset(), global_step=epoch)
+        writer.add_scalar('score/fake', metrics['score/fake'].compute_and_reset(), global_step=epoch)
+        writer.add_scalar('score/delta', metrics['score/delta'].compute_and_reset(), global_step=epoch)
         writer.add_image('real', torchvision.utils.make_grid((real + 1) / 2), global_step=epoch)
         writer.add_image('fake', torchvision.utils.make_grid((fake + 1) / 2), global_step=epoch)
 
