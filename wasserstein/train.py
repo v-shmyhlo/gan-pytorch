@@ -87,7 +87,7 @@ def main():
                 discriminator_opt.step()
 
             # generator
-            noise = dist.sample((args.batch_size, args.latent_size))
+            noise = dist.sample((args.batch_size, args.latent_size)).to(device)
             fake = generator(noise)
             score = discriminator(fake)
 
