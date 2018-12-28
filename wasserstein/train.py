@@ -64,7 +64,7 @@ def main():
 
         discriminator.train()
         generator.train()
-        for _ in tqdm(range(len(data_loader) // args.discr_steps), desc='training'):
+        for _ in tqdm(range(len(data_loader) // args.discr_steps), desc='epoch {} training'.format(epoch)):
             # discriminator
             for _ in range(args.discr_steps):
                 for p in discriminator.parameters():
