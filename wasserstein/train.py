@@ -93,7 +93,7 @@ def main():
 
                 # fake
                 noise = dist.sample((args.batch_size, args.latent_size)).to(device)
-                noise = noise / noise.norm(dim=-1, keepdim=True)
+                # noise = noise / noise.norm(dim=-1, keepdim=True)
                 fake = generator(noise)
                 score = discriminator(fake)
                 (-score.mean()).backward()
@@ -105,7 +105,7 @@ def main():
 
             # generator
             noise = dist.sample((args.batch_size, args.latent_size)).to(device)
-            noise = noise / noise.norm(dim=-1, keepdim=True)
+            # noise = noise / noise.norm(dim=-1, keepdim=True)
             fake = generator(noise)
             score = discriminator(fake)
 
