@@ -3,6 +3,9 @@ import torch
 import modules
 
 
+# TODO: relu or lrelu?
+
+
 class Conv(nn.Module):
     def __init__(self, model_size, latent_size):
         super().__init__()
