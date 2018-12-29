@@ -55,7 +55,7 @@ def main():
     encoder.to(device)
     decoder.to(device)
 
-    opt = torch.optim.Adam(encoder.parameters(), lr=args.learning_rate)
+    opt = torch.optim.Adam(list(encoder.parameters()) + list(decoder.parameters()), lr=args.learning_rate)
     noise_dist = torch.distributions.Normal(0, 1)
 
     writer = SummaryWriter(args.experiment_path)
