@@ -71,7 +71,7 @@ def main():
 
             mean, log_var = encoder(real)
             latent = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
-            latent = mean + latent * torch.exp(log_var)
+            latent = mean + latent * torch.exp(log_var / 2)
             fake = decoder(latent)
 
             # TODO: loss
