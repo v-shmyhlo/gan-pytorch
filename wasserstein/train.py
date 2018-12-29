@@ -25,6 +25,7 @@ def build_parser():
     parser.add_argument('--restore-path', type=str)
     parser.add_argument('--dataset-path', type=str, default='./data')
     parser.add_argument('--learning-rate', type=float, default=5e-5)
+    parser.add_argument('--model-size', type=int, default=32)
     parser.add_argument('--latent-size', type=int, default=128)
     parser.add_argument('--batch-size', type=int, default=32)
     parser.add_argument('--discr-steps', type=int, default=5)
@@ -52,8 +53,8 @@ def main():
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvolutionalDiscriminator(args.latent_size)
-    generator = ConvolutionalGenerator(args.latent_size)
+    discriminator = ConvolutionalDiscriminator(args.model_size, args.latent_size)
+    generator = ConvolutionalGenerator(args.model_size, args.latent_size)
 
     discriminator.to(device)
     generator.to(device)
