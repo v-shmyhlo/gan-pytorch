@@ -74,9 +74,10 @@ def main():
             latent = mean + latent * torch.exp(log_var / 2)
             fake = decoder(latent)
 
-            # TODO: loss
-            loss = F.mse_loss(input=fake, target=real).mean() + \
-                   (-0.5 * (1 + log_var - mean**2 - torch.exp(log_var)).sum(-1)).mean()
+            # TODO: loss (reconstruction, summing, mean)
+            mse = F.mse_loss(input=fake, target=real)
+            kld = -0.5 * (1 + log_var - mean**2 - log_var.exp()).sum(-1)
+            loss = mse.mean() + kld.mean()
             metrics['loss'].update(loss.data.cpu().numpy())
 
             opt.zero_grad()
