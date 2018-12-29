@@ -4,6 +4,7 @@ import torchvision
 from ticpfptp.metrics import Mean
 from dataset import Dataset
 import torch.utils.data
+import utils
 import torch
 import logging
 from tqdm import tqdm
@@ -112,8 +113,8 @@ def main():
         writer.add_scalar('score/real', metrics['score/real'].compute_and_reset(), global_step=epoch)
         writer.add_scalar('score/fake', metrics['score/fake'].compute_and_reset(), global_step=epoch)
         writer.add_scalar('score/delta', metrics['score/delta'].compute_and_reset(), global_step=epoch)
-        writer.add_image('real', torchvision.utils.make_grid((real + 1) / 2), global_step=epoch)
-        writer.add_image('fake', torchvision.utils.make_grid((fake + 1) / 2), global_step=epoch)
+        writer.add_image('real', utils.make_grid((real + 1) / 2), global_step=epoch)
+        writer.add_image('fake', utils.make_grid((fake + 1) / 2), global_step=epoch)
 
 
 if __name__ == '__main__':

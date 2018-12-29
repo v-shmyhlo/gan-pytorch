@@ -1,6 +1,7 @@
 import argparse
 import torch.nn.functional as F
 import os
+import utils
 import torchvision
 from ticpfptp.metrics import Mean
 from dataset import Dataset
@@ -107,8 +108,8 @@ def main():
 
         writer.add_scalar('loss/discriminator', metrics['loss/discriminator'].compute_and_reset(), global_step=epoch)
         writer.add_scalar('loss/generator', metrics['loss/generator'].compute_and_reset(), global_step=epoch)
-        writer.add_image('real', torchvision.utils.make_grid((real + 1) / 2), global_step=epoch)
-        writer.add_image('fake', torchvision.utils.make_grid((fake + 1) / 2), global_step=epoch)
+        writer.add_image('real', utils.make_grid((real + 1) / 2), global_step=epoch)
+        writer.add_image('fake', utils.make_grid((fake + 1) / 2), global_step=epoch)
 
 
 if __name__ == '__main__':
