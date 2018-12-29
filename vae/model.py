@@ -42,7 +42,8 @@ class Decoder(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
 
             nn.Conv2d(model_size, 1, 3, padding=1),
-            nn.Tanh())
+            # nn.Tanh())
+            nn.Sigmoid())  # TODO:
 
     def forward(self, input):
         input = input.view(*input.size(), 1, 1)

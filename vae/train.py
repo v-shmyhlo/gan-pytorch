@@ -68,6 +68,7 @@ def main():
         decoder.train()
         for real, _ in tqdm(data_loader, desc='epoch {} training'.format(epoch)):
             real = real.to(device)
+            real = (real + 1) / 2  # TODO:
 
             mean, log_var = encoder(real)
             latent = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
@@ -75,7 +76,8 @@ def main():
             fake = decoder(latent)
 
             # TODO: loss (reconstruction, summing, mean)
-            mse = F.mse_loss(input=fake, target=real)
+            # mse = F.mse_loss(input=fake, target=real)
+            mse = F.binary_cross_entropy(input=real, target=fake)  # TODO:
             kld = -0.5 * (1 + log_var - mean**2 - log_var.exp()).sum(-1)
             loss = mse.mean() + kld.mean()
             metrics['loss'].update(loss.data.cpu().numpy())
@@ -85,8 +87,12 @@ def main():
             opt.step()
 
         writer.add_scalar('loss', metrics['loss'].compute_and_reset(), global_step=epoch)
-        writer.add_image('real', utils.make_grid((real + 1) / 2), global_step=epoch)
-        writer.add_image('fake', utils.make_grid((fake + 1) / 2), global_step=epoch)
+        # writer.add_image('real', utils.make_grid((real + 1) / 2), global_step=epoch)
+        # writer.add_image('fake', utils.make_grid((fake + 1) / 2), global_step=epoch)
+
+        # TODO:
+        writer.add_image('real', utils.make_grid(real), global_step=epoch)
+        writer.add_image('fake', utils.make_grid(fake), global_step=epoch)
 
 
 if __name__ == '__main__':
