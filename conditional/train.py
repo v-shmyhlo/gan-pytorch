@@ -86,7 +86,7 @@ def main():
 
             # fake
             noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
-            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size]))
+            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size])).to(device)
             fake = generator(noise, fake_labels)
             logits = discriminator(fake, fake_labels)
             loss = F.binary_cross_entropy_with_logits(input=logits, target=torch.zeros_like(logits).to(device))
@@ -98,7 +98,7 @@ def main():
 
             # generator
             noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
-            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size]))
+            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size])).to(device)
             fake = generator(noise, fake_labels)
             logits = discriminator(fake, fake_labels)
             loss = F.binary_cross_entropy_with_logits(input=logits, target=torch.ones_like(logits).to(device))
