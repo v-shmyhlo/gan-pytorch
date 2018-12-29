@@ -32,7 +32,6 @@ class ConvCond(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(num_classes, latent_size)
-        # self.merge = nn.Linear(latent_size * 2, latent_size)
 
         self.merge = nn.Sequential(
             nn.Linear(latent_size * 2, latent_size),
