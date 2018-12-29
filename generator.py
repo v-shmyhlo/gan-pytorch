@@ -32,10 +32,7 @@ class ConvCond(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(num_classes, model_size)
-
-        self.merge = nn.Sequential(
-            nn.Linear(latent_size + model_size, latent_size),
-            nn.LeakyReLU(0.2, inplace=True))
+        self.merge = nn.Linear(latent_size + model_size, latent_size)
 
         self.conv = nn.Sequential(
             modules.ConvTransposeNorm2d(latent_size, model_size * 4, 7),

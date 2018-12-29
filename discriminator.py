@@ -40,11 +40,9 @@ class ConvCond(nn.Module):
             modules.ConvNorm2d(model_size * 2, model_size * 4, 3, stride=2, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
 
-            nn.Conv2d(model_size * 4, latent_size, 7),
-            nn.LeakyReLU(0.2, inplace=True))
+            nn.Conv2d(model_size * 4, latent_size, 7))
 
         self.embedding = nn.Embedding(num_classes, model_size)
-
         self.merge = nn.Linear(latent_size + model_size, latent_size)
 
     def forward(self, input, labels):
