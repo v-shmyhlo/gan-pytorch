@@ -75,8 +75,8 @@ def main():
             fake = decoder(latent)
 
             # TODO: loss
-            loss = F.mse_loss(input=fake, target=real) - \
-                   0.5 * (1 + log_var - mean**2 - torch.exp(log_var)).sum(-1)
+            loss = F.mse_loss(input=fake, target=real).mean() + \
+                   (-0.5 * (1 + log_var - mean**2 - torch.exp(log_var)).sum(-1)).mean()
             metrics['loss'].update(loss.data.cpu().numpy())
 
             opt.zero_grad()
