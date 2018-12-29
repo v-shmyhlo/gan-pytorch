@@ -31,8 +31,8 @@ class ConvCond(nn.Module):
     def __init__(self, model_size, latent_size, num_classes):
         super().__init__()
 
-        self.embedding = nn.Embedding(num_classes, model_size)
-        self.merge = nn.Linear(latent_size + model_size, latent_size)
+        self.embedding = nn.Embedding(num_classes, latent_size)
+        self.merge = nn.Linear(latent_size * 2, latent_size)
 
         self.conv = nn.Sequential(
             modules.ConvTransposeNorm2d(latent_size, model_size * 4, 7),
