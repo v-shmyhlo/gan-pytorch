@@ -42,8 +42,8 @@ class ConvCond(nn.Module):
 
             nn.Conv2d(model_size * 4, latent_size, 7))
 
-        self.embedding = nn.Embedding(num_classes, model_size)
-        self.merge = nn.Linear(latent_size + model_size, latent_size)
+        self.embedding = nn.Embedding(num_classes, latent_size)
+        self.merge = nn.Linear(latent_size * 2, latent_size)
 
     def forward(self, input, labels):
         input = self.conv(input)
