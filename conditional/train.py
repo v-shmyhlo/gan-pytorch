@@ -108,6 +108,11 @@ def main():
             generator_opt.step()
             metrics['loss/generator'].update(loss.data.cpu().numpy())
 
+        noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
+        fake_labels = (list(range(NUM_CLASSES)) * args.batch_size)[:args.batch_size]
+        fake_labels = torch.tensor(fake_labels).to(device)
+        fake = generator(noise, fake_labels)
+
         writer.add_scalar('loss/discriminator', metrics['loss/discriminator'].compute_and_reset(), global_step=epoch)
         writer.add_scalar('loss/generator', metrics['loss/generator'].compute_and_reset(), global_step=epoch)
         writer.add_image('real', torchvision.utils.make_grid((real + 1) / 2), global_step=epoch)
