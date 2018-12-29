@@ -77,7 +77,7 @@ def main():
 
             # TODO: loss (reconstruction, summing, mean)
             # mse = F.mse_loss(input=fake, target=real)
-            mse = F.binary_cross_entropy(input=real, target=fake)  # TODO:
+            mse = F.binary_cross_entropy(input=fake, target=real)  # TODO:
             kld = -0.5 * (1 + log_var - mean**2 - log_var.exp()).sum(-1)
             loss = mse.mean() + kld.mean()
             metrics['loss'].update(loss.data.cpu().numpy())
