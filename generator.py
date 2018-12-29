@@ -32,7 +32,10 @@ class ConvCond(nn.Module):
         super().__init__()
 
         self.embedding = nn.Embedding(num_classes, model_size)
-        self.linear = nn.Linear(latent_size + model_size, latent_size)
+
+        self.merge = nn.Sequential(
+            nn.Linear(latent_size + model_size, latent_size),
+            nn.LeakyReLU(0.2, inplace=True))
 
         self.conv = nn.Sequential(
             modules.ConvTransposeNorm2d(latent_size, model_size * 4, 7),
@@ -50,7 +53,7 @@ class ConvCond(nn.Module):
     def forward(self, input, labels):
         labels = self.embedding(labels)
         input = torch.cat([input, labels], -1)
-        input = self.linear(input)
+        input = self.merge(input)
         input = input.view(*input.size(), 1, 1)
         input = self.conv(input)
 
