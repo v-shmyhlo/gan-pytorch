@@ -1,4 +1,5 @@
 import torch.nn as nn
+import torch
 import modules
 
 
@@ -41,8 +42,14 @@ class ConvCond(nn.Module):
 
             nn.Conv2d(model_size * 4, latent_size, 7))
 
+        self.embedding = nn.Embedding(num_classes, model_size)
+        self.linear = nn.Linear(latent_size + model_size, latent_size)
+
     def forward(self, input, labels):
         input = self.conv(input)
         input = input.view(*input.size()[:2])
+        labels = self.embedding(labels)
+        input = torch.cat([input, labels], -1)
+        input = self.linear(input)
 
         return input

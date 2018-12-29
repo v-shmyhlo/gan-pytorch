@@ -9,6 +9,7 @@ class Dataset(torch.utils.data.Dataset):
         images, labels = mnist.load_training()
         images = (images / 255 * 2 - 1).astype(np.float32)
         images = images.reshape((images.shape[0], 28, 28))
+        labels = labels.astype(np.int64)
 
         self.images = images
         self.labels = labels

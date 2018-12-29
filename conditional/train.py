@@ -1,4 +1,6 @@
 import argparse
+import numpy as np
+import torch.nn.functional as F
 import os
 import torchvision
 from ticpfptp.metrics import Mean
@@ -9,14 +11,16 @@ import logging
 from tqdm import tqdm
 from ticpfptp.format import args_to_string
 from ticpfptp.torch import fix_seed
-from discriminator import Convolutional as ConvolutionalDiscriminator
-from generator import Convolutional as ConvolutionalGenerator
+from discriminator import ConvCond as ConvDiscriminator
+from generator import ConvCond as ConvGenerator
 from tensorboardX import SummaryWriter
-
 
 # TODO: spherical z
 # TODO: spherical interpolation
 # TODO: norm z
+# TODO: better visualization
+
+NUM_CLASSES = 10
 
 
 def build_parser():
@@ -28,8 +32,6 @@ def build_parser():
     parser.add_argument('--model-size', type=int, default=32)
     parser.add_argument('--latent-size', type=int, default=128)
     parser.add_argument('--batch-size', type=int, default=32)
-    parser.add_argument('--discr-steps', type=int, default=5)
-    parser.add_argument('--discr-clamp', type=float, nargs=2, default=[-0.01, 0.01])
     # parser.add_argument('--opt', type=str, choices=['adam', 'momentum'], default='momentum')
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=42)
@@ -51,8 +53,8 @@ def main():
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvolutionalDiscriminator(args.model_size, args.latent_size)
-    generator = ConvolutionalGenerator(args.model_size, args.latent_size)
+    discriminator = ConvDiscriminator(args.model_size, args.latent_size, NUM_CLASSES)
+    generator = ConvGenerator(args.model_size, args.latent_size, NUM_CLASSES)
     discriminator.to(device)
     generator.to(device)
 
@@ -63,55 +65,51 @@ def main():
 
     writer = SummaryWriter(args.experiment_path)
     metrics = {
-        'score/real': Mean(),
-        'score/fake': Mean(),
-        'score/delta': Mean()
+        'loss/discriminator': Mean(),
+        'loss/generator': Mean()
     }
 
     for epoch in range(args.epochs):
-        data_loader_iter = iter(data_loader)
-
         discriminator.train()
         generator.train()
-        for _ in tqdm(range(len(data_loader) // args.discr_steps), desc='epoch {} training'.format(epoch)):
+        for real, real_labels in tqdm(data_loader, desc='epoch {} training'.format(epoch)):
+            real, real_labels = real.to(device), real_labels.to(device)
+
             # discriminator
-            for _ in range(args.discr_steps):
-                for p in discriminator.parameters():
-                    p.data.clamp_(args.discr_clamp[0], args.discr_clamp[1])
+            discriminator_opt.zero_grad()
 
-                discriminator_opt.zero_grad()
+            # real
+            logits = discriminator(real, real_labels)
+            loss = F.binary_cross_entropy_with_logits(input=logits, target=torch.ones_like(logits).to(device))
+            loss.mean().backward()
+            loss_real = loss
 
-                # real
-                real, _ = next(data_loader_iter)
-                real = real.to(device)
-                score = discriminator(real)
-                score.mean().backward()
-                metrics['score/real'].update(score.data.cpu().numpy())
-                score_real = score
+            # fake
+            noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
+            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size]))
+            fake = generator(noise, fake_labels)
+            logits = discriminator(fake, fake_labels)
+            loss = F.binary_cross_entropy_with_logits(input=logits, target=torch.zeros_like(logits).to(device))
+            loss.mean().backward()
+            loss_fake = loss
 
-                # fake
-                noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
-                fake = generator(noise)
-                score = discriminator(fake)
-                (-score.mean()).backward()
-                metrics['score/fake'].update(score.data.cpu().numpy())
-                score_fake = score
-
-                discriminator_opt.step()
-                metrics['score/delta'].update((score_real - score_fake).data.cpu().numpy())
+            discriminator_opt.step()
+            metrics['loss/discriminator'].update((loss_real + loss_fake).data.cpu().numpy())
 
             # generator
             noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
-            fake = generator(noise)
-            score = discriminator(fake)
+            fake_labels = torch.from_numpy(np.random.randint(NUM_CLASSES, size=[args.batch_size]))
+            fake = generator(noise, fake_labels)
+            logits = discriminator(fake, fake_labels)
+            loss = F.binary_cross_entropy_with_logits(input=logits, target=torch.ones_like(logits).to(device))
 
             generator_opt.zero_grad()
-            score.mean().backward()
+            loss.mean().backward()
             generator_opt.step()
+            metrics['loss/generator'].update(loss.data.cpu().numpy())
 
-        writer.add_scalar('score/real', metrics['score/real'].compute_and_reset(), global_step=epoch)
-        writer.add_scalar('score/fake', metrics['score/fake'].compute_and_reset(), global_step=epoch)
-        writer.add_scalar('score/delta', metrics['score/delta'].compute_and_reset(), global_step=epoch)
+        writer.add_scalar('loss/discriminator', metrics['loss/discriminator'].compute_and_reset(), global_step=epoch)
+        writer.add_scalar('loss/generator', metrics['loss/generator'].compute_and_reset(), global_step=epoch)
         writer.add_image('real', torchvision.utils.make_grid((real + 1) / 2), global_step=epoch)
         writer.add_image('fake', torchvision.utils.make_grid((fake + 1) / 2), global_step=epoch)
 

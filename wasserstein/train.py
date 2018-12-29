@@ -9,8 +9,8 @@ import logging
 from tqdm import tqdm
 from ticpfptp.format import args_to_string
 from ticpfptp.torch import fix_seed
-from discriminator import Convolutional as ConvolutionalDiscriminator
-from generator import Convolutional as ConvolutionalGenerator
+from discriminator import Conv as ConvDiscriminator
+from generator import Conv as ConvGenerator
 from tensorboardX import SummaryWriter
 
 
@@ -51,8 +51,8 @@ def main():
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvolutionalDiscriminator(args.model_size, args.latent_size)
-    generator = ConvolutionalGenerator(args.model_size, args.latent_size)
+    discriminator = ConvDiscriminator(args.model_size, args.latent_size)
+    generator = ConvGenerator(args.model_size, args.latent_size)
     discriminator.to(device)
     generator.to(device)
 
