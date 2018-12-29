@@ -8,7 +8,7 @@ import torch
 import logging
 from tqdm import tqdm
 from ticpfptp.format import args_to_string
-from ticpfptp.torch import fix_seed, save_model, load_weights
+from ticpfptp.torch import fix_seed
 from discriminator import Convolutional as ConvolutionalDiscriminator
 from generator import Convolutional as ConvolutionalGenerator
 from tensorboardX import SummaryWriter
@@ -41,8 +41,6 @@ def main():
     logging.basicConfig(level=logging.INFO)
     args = build_parser().parse_args()
     logging.info(args_to_string(args))
-    # experiment_path = os.path.join(args.experiment_path, args_to_path(
-    #     args, ignore=['experiment_path', 'restore_path', 'dataset_path', 'epochs', 'workers']))
     fix_seed(args.seed)
 
     data_loader = torch.utils.data.DataLoader(
@@ -55,14 +53,13 @@ def main():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     discriminator = ConvolutionalDiscriminator(args.model_size, args.latent_size)
     generator = ConvolutionalGenerator(args.model_size, args.latent_size)
-
     discriminator.to(device)
     generator.to(device)
 
-    dist = torch.distributions.Normal(0, 1)
-
     discriminator_opt = torch.optim.Adam(discriminator.parameters(), lr=args.learning_rate, betas=(0.5, 0.999))
     generator_opt = torch.optim.Adam(generator.parameters(), lr=args.learning_rate, betas=(0.5, 0.999))
+
+    noise_dist = torch.distributions.Normal(0, 1)
 
     writer = SummaryWriter(args.experiment_path)
     metrics = {
@@ -93,8 +90,7 @@ def main():
                 score_real = score
 
                 # fake
-                noise = dist.sample((args.batch_size, args.latent_size)).to(device)
-                # noise = noise / noise.norm(dim=-1, keepdim=True)
+                noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
                 fake = generator(noise)
                 score = discriminator(fake)
                 (-score.mean()).backward()
@@ -105,8 +101,7 @@ def main():
                 metrics['score/delta'].update((score_real - score_fake).data.cpu().numpy())
 
             # generator
-            noise = dist.sample((args.batch_size, args.latent_size)).to(device)
-            # noise = noise / noise.norm(dim=-1, keepdim=True)
+            noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
             fake = generator(noise)
             score = discriminator(fake)
 
