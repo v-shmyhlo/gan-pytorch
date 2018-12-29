@@ -17,6 +17,7 @@ from tensorboardX import SummaryWriter
 # TODO: spherical z
 # TODO: spherical interpolation
 # TODO: norm z
+# TODO: cleanup (args, code)
 
 
 def build_parser():
@@ -69,7 +70,8 @@ def main():
             real = real.to(device)
 
             mean, log_var = encoder(real)
-            latent = mean + noise_dist.sample((args.batch_size, args.latent_size)) * torch.exp(log_var)
+            latent = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
+            latent = mean + latent * torch.exp(log_var)
             fake = decoder(latent)
 
             # TODO: loss
