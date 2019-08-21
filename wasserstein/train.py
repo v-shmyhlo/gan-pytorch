@@ -1,18 +1,20 @@
 import argparse
-import os
-import torchvision
-from ticpfptp.metrics import Mean
-from dataset import Dataset
-import torch.utils.data
-import utils
-import torch
 import logging
-from tqdm import tqdm
+import os
+
+import torch
+import torch.utils.data
+import torchvision
+import torchvision.transforms as T
+from tensorboardX import SummaryWriter
 from ticpfptp.format import args_to_string
+from ticpfptp.metrics import Mean
 from ticpfptp.torch import fix_seed
+from tqdm import tqdm
+
+import utils
 from discriminator import Conv as ConvDiscriminator
 from generator import Conv as ConvGenerator
-from tensorboardX import SummaryWriter
 
 
 # TODO: spherical z
@@ -26,12 +28,10 @@ def build_parser():
     parser.add_argument('--restore-path', type=str)
     parser.add_argument('--dataset-path', type=str, default='./data')
     parser.add_argument('--learning-rate', type=float, default=5e-5)
-    parser.add_argument('--model-size', type=int, default=32)
-    parser.add_argument('--latent-size', type=int, default=128)
-    parser.add_argument('--batch-size', type=int, default=32)
+    parser.add_argument('--latent-size', type=int, default=100)
+    parser.add_argument('--batch-size', type=int, default=64)
     parser.add_argument('--discr-steps', type=int, default=5)
-    parser.add_argument('--discr-clamp', type=float, nargs=2, default=[-0.01, 0.01])
-    # parser.add_argument('--opt', type=str, choices=['adam', 'momentum'], default='momentum')
+    parser.add_argument('--discr-clamp', type=float, default=0.01)
     parser.add_argument('--epochs', type=int, default=1000)
     parser.add_argument('--seed', type=int, default=42)
 
@@ -44,16 +44,21 @@ def main():
     logging.info(args_to_string(args))
     fix_seed(args.seed)
 
+    transform = T.Compose([
+        T.Resize(64),
+        T.ToTensor(),
+        T.Normalize(mean=[0.5], std=[0.5]),
+    ])
     data_loader = torch.utils.data.DataLoader(
-        Dataset(args.dataset_path),
+        torchvision.datasets.MNIST(args.dataset_path, transform=transform, download=True),
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=os.cpu_count(),
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvDiscriminator(args.model_size, args.latent_size)
-    generator = ConvGenerator(args.model_size, args.latent_size)
+    discriminator = ConvDiscriminator(1)
+    generator = ConvGenerator(args.latent_size, 1)
     discriminator.to(device)
     generator.to(device)
 
@@ -77,9 +82,6 @@ def main():
         for _ in tqdm(range(len(data_loader) // args.discr_steps), desc='epoch {} training'.format(epoch)):
             # discriminator
             for _ in range(args.discr_steps):
-                for p in discriminator.parameters():
-                    p.data.clamp_(args.discr_clamp[0], args.discr_clamp[1])
-
                 discriminator_opt.zero_grad()
 
                 # real
@@ -101,6 +103,9 @@ def main():
                 discriminator_opt.step()
                 metrics['score/delta'].update((score_real - score_fake).data.cpu().numpy())
 
+                for p in discriminator.parameters():
+                    p.data.clamp_(-args.discr_clamp, args.discr_clamp)
+                   
             # generator
             noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
             fake = generator(noise)

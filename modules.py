@@ -8,9 +8,9 @@ class ConvNorm2d(nn.Module):
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=False)
         self.norm = nn.BatchNorm2d(out_channels)
 
-        nn.init.kaiming_normal_(self.conv.weight, mode='fan_out', nonlinearity='relu')
-        nn.init.constant_(self.norm.weight, 1)
-        nn.init.constant_(self.norm.bias, 0)
+        nn.init.normal_(self.conv.weight, 0.0, 0.02)
+        nn.init.constant_(self.norm.weight, 1.)
+        nn.init.constant_(self.norm.bias, 0.)
 
     def forward(self, input):
         input = self.conv(input)
@@ -27,9 +27,9 @@ class ConvTransposeNorm2d(nn.Module):
             in_channels, out_channels, kernel_size, stride=stride, padding=padding, bias=False)
         self.norm = nn.BatchNorm2d(out_channels)
 
-        nn.init.kaiming_normal_(self.conv.weight, mode='fan_out', nonlinearity='relu')
-        nn.init.constant_(self.norm.weight, 1)
-        nn.init.constant_(self.norm.bias, 0)
+        nn.init.normal_(self.conv.weight, 0.0, 0.02)
+        nn.init.constant_(self.norm.weight, 1.)
+        nn.init.constant_(self.norm.bias, 0.)
 
     def forward(self, input):
         input = self.conv(input)
