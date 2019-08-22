@@ -16,10 +16,12 @@ import utils
 from discriminator import Conv as ConvDiscriminator
 from generator import Conv as ConvGenerator
 
-
 # TODO: spherical z
 # TODO: spherical interpolation
 # TODO: norm z
+
+
+NUM_CHANNELS = 3
 
 
 def build_parser():
@@ -46,19 +48,21 @@ def main():
 
     transform = T.Compose([
         T.Resize(64),
+        T.CenterCrop(64),
         T.ToTensor(),
         T.Normalize(mean=[0.5], std=[0.5]),
     ])
     data_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST(args.dataset_path, transform=transform, download=True),
+        # torchvision.datasets.MNIST(args.dataset_path, transform=transform, download=True),
+        torchvision.datasets.ImageFolder(args.dataset_path, transform=transform),
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=os.cpu_count(),
         drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    discriminator = ConvDiscriminator(1)
-    generator = ConvGenerator(args.latent_size, 1)
+    discriminator = ConvDiscriminator(NUM_CHANNELS)
+    generator = ConvGenerator(args.latent_size, NUM_CHANNELS)
     discriminator.to(device)
     generator.to(device)
 
@@ -105,14 +109,16 @@ def main():
 
                 for p in discriminator.parameters():
                     p.data.clamp_(-args.discr_clamp, args.discr_clamp)
-                   
+
             # generator
+            generator_opt.zero_grad()
+
+            # fake
             noise = noise_dist.sample((args.batch_size, args.latent_size)).to(device)
             fake = generator(noise)
             score = discriminator(fake)
-
-            generator_opt.zero_grad()
             score.mean().backward()
+
             generator_opt.step()
 
         writer.add_scalar('score/real', metrics['score/real'].compute_and_reset(), global_step=epoch)
