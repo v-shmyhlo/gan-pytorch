@@ -21,13 +21,13 @@ from generator import Conv as ConvGenerator
 # TODO: norm z
 
 
+IMAGE_SIZE = 64
 NUM_CHANNELS = 3
 
 
 def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--experiment-path', type=str, default='./tf_log')
-    parser.add_argument('--restore-path', type=str)
     parser.add_argument('--dataset-path', type=str, default='./data')
     parser.add_argument('--learning-rate', type=float, default=5e-5)
     parser.add_argument('--latent-size', type=int, default=100)
@@ -47,8 +47,8 @@ def main():
     fix_seed(args.seed)
 
     transform = T.Compose([
-        T.Resize(64),
-        T.CenterCrop(64),
+        T.Resize(IMAGE_SIZE),
+        T.CenterCrop(IMAGE_SIZE),
         T.ToTensor(),
         T.Normalize(mean=[0.5], std=[0.5]),
     ])
