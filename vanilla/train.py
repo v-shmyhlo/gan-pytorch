@@ -3,6 +3,7 @@ import os
 import click
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.utils.data
 import torchvision
 import torchvision.transforms as T
@@ -59,6 +60,7 @@ def main(config_path, **kwargs):
             config.image_size, config.latent_size, NUM_CHANNELS, base_features=config.model.base_features),
     })
     model.to(DEVICE)
+    model.apply(weights_init)
     if config.restore_path is not None:
         model.load_state_dict(torch.load(config.restore_path))
 
@@ -75,9 +77,9 @@ def main(config_path, **kwargs):
         'loss/generator': Mean()
     }
 
-    for epoch in range(config.epochs):
+    for epoch in range(1, config.epochs + 1):
         model.train()
-        for i, (real, _) in enumerate(tqdm(data_loader, desc='epoch {} training'.format(epoch))):
+        for real, _ in tqdm(data_loader, desc='epoch {} training'.format(epoch)):
             real = real.to(DEVICE)
 
             # discriminator ############################################################################################
@@ -85,7 +87,7 @@ def main(config_path, **kwargs):
 
             # real
             scores = model.discriminator(real)
-            loss = -scores
+            loss = F.softplus(-scores)
             loss.mean().backward()
             loss_real = loss
 
@@ -93,18 +95,12 @@ def main(config_path, **kwargs):
             noise = noise_dist.sample((config.batch_size, config.latent_size)).to(DEVICE)
             fake = model.generator(noise)
             scores = model.discriminator(fake)
-            loss = scores
+            loss = F.softplus(scores)
             loss.mean().backward()
             loss_fake = loss
 
             discriminator_opt.step()
             metrics['loss/discriminator'].update((loss_real + loss_fake).data.cpu().numpy())
-
-            for p in model.discriminator.parameters():
-                p.data.clamp_(-0.01, 0.01)
-
-            if i % 5 != 0:
-                continue
 
             # generator ################################################################################################
             generator_opt.zero_grad()
@@ -113,7 +109,7 @@ def main(config_path, **kwargs):
             noise = noise_dist.sample((config.batch_size, config.latent_size)).to(DEVICE)
             fake = model.generator(noise)
             scores = model.discriminator(fake)
-            loss = -scores
+            loss = F.softplus(-scores)
             loss.mean().backward()
 
             generator_opt.step()
@@ -125,6 +121,14 @@ def main(config_path, **kwargs):
         writer.add_image('fake', utils.make_grid((fake + 1) / 2), global_step=epoch)
 
         torch.save(model.state_dict(), os.path.join(config.experiment_path, 'model.pth'))
+
+
+def weights_init(m):
+    if isinstance(m, (nn.Linear, nn.Conv2d, nn.ConvTranspose2d)):
+        torch.nn.init.normal_(m.weight.data, 0., 0.02)
+    elif isinstance(m, (nn.BatchNorm2d,)):
+        torch.nn.init.normal_(m.weight.data, 1., 0.02)
+        torch.nn.init.constant_(m.bias.data, 0.)
 
 
 if __name__ == '__main__':

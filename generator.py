@@ -3,61 +3,34 @@ import torch.nn as nn
 from modules import ConvTransposeNorm2d
 
 
-class ReLU(nn.ReLU):
+class ReLU(nn.LeakyReLU):
     def __init__(self):
-        super().__init__(inplace=True)
+        super().__init__(0.2, inplace=True)
 
 
 class Conv(nn.Module):
-    def __init__(self, lat_features, image_features):
+    def __init__(self, image_size, lat_features, image_features, base_features=16):
         super().__init__()
 
-        self.conv = nn.Sequential(
-            ConvTransposeNorm2d(lat_features, 512, 4, stride=1, padding=0),
+        blocks = [
+            ConvTransposeNorm2d(lat_features, base_features * 2**5, image_size // 2**5),
             ReLU(),
-            ConvTransposeNorm2d(512, 256, 4, stride=2, padding=1),
-            ReLU(),
-            ConvTransposeNorm2d(256, 128, 4, stride=2, padding=1),
-            ReLU(),
-            ConvTransposeNorm2d(128, 64, 4, stride=2, padding=1),
-            ReLU(),
-            nn.ConvTranspose2d(64, image_features, 4, stride=2, padding=1),
-            nn.Tanh())
+        ]
+        for i in reversed(range(5)):
+            # blocks.append(ConvNorm2d(base_features * 2**(i + 1), base_features * 2**i, 3, padding=1))
+            # blocks.append(ReLU())
+            # blocks.append(nn.UpsamplingBilinear2d(scale_factor=2))
+
+            blocks.append(ConvTransposeNorm2d(base_features * 2**(i + 1), base_features * 2**i, 4, stride=2, padding=1))
+            blocks.append(ReLU())
+
+        blocks.append(nn.Conv2d(base_features, image_features, 1))
+        blocks.append(nn.Tanh())
+
+        self.conv = nn.Sequential(*blocks)
 
     def forward(self, input):
         input = input.view(input.size(0), input.size(1), 1, 1)
         input = self.conv(input)
 
         return input
-
-# class ConvCond(nn.Module):
-#     def __init__(self, model_size, latent_size, num_classes):
-#         super().__init__()
-#
-#         self.embedding = nn.Embedding(num_classes, latent_size)
-#
-#         self.merge = nn.Sequential(
-#             nn.Linear(latent_size * 2, latent_size),
-#             nn.LeakyReLU(0.2, inplace=True))
-#
-#         self.conv = nn.Sequential(
-#             modules.ConvTransposeNorm2d(latent_size, model_size * 4, 7),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             modules.ConvTransposeNorm2d(model_size * 4, model_size * 2, 4, stride=2, padding=1),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             modules.ConvTransposeNorm2d(model_size * 2, model_size, 4, stride=2, padding=1),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             nn.Conv2d(model_size, 1, 3, padding=1),
-#             nn.Tanh())
-#
-#     def forward(self, input, labels):
-#         labels = self.embedding(labels)
-#         input = torch.cat([input, labels], -1)
-#         input = self.merge(input)
-#         input = input.view(*input.size(), 1, 1)
-#         input = self.conv(input)
-#
-#         return input

@@ -9,51 +9,29 @@ class ReLU(nn.LeakyReLU):
 
 
 class Conv(nn.Module):
-    def __init__(self, image_features):
+    def __init__(self, image_size, image_features, base_features=16):
         super().__init__()
 
-        self.conv = nn.Sequential(
-            nn.Conv2d(image_features, 64, 4, stride=2, padding=1),
+        blocks = [
+            ConvNorm2d(image_features, base_features, 1),
             ReLU(),
-            ConvNorm2d(64, 128, 4, stride=2, padding=1),
-            ReLU(),
-            ConvNorm2d(128, 256, 4, stride=2, padding=1),
-            ReLU(),
-            ConvNorm2d(256, 512, 4, stride=2, padding=1),
-            ReLU(),
-            nn.Conv2d(512, 1, 4, stride=1, padding=0))
+        ]
+        for i in range(5):
+            # blocks.append(nn.UpsamplingBilinear2d(scale_factor=0.5))
+            # blocks.append(ConvNorm2d(base_features * 2**i, base_features * 2**(i + 1), 3, padding=1))
+            # blocks.append(ReLU())
+
+            blocks.append(ConvNorm2d(base_features * 2**i, base_features * 2**(i + 1), 4, stride=2, padding=1))
+            blocks.append(ReLU())
+
+            blocks.append(nn.Dropout2d(0.25))
+
+        blocks.append(nn.Conv2d(base_features * 2**5, 1, image_size // 2**5))
+
+        self.conv = nn.Sequential(*blocks)
 
     def forward(self, input):
         input = self.conv(input)
         input = input.view(input.size(0))
 
         return input
-
-# class ConvCond(nn.Module):
-#     def __init__(self, model_size, latent_size, num_classes):
-#         super().__init__()
-#
-#         self.conv = nn.Sequential(
-#             modules.ConvNorm2d(1, model_size, 3, padding=1),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             modules.ConvNorm2d(model_size, model_size * 2, 3, stride=2, padding=1),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             modules.ConvNorm2d(model_size * 2, model_size * 4, 3, stride=2, padding=1),
-#             nn.LeakyReLU(0.2, inplace=True),
-#
-#             nn.Conv2d(model_size * 4, latent_size, 7),
-#             nn.LeakyReLU(0.2, inplace=True))
-#
-#         self.embedding = nn.Embedding(num_classes, latent_size)
-#         self.merge = nn.Linear(latent_size * 2, latent_size)
-#
-#     def forward(self, input, labels):
-#         input = self.conv(input)
-#         input = input.view(*input.size()[:2])
-#         labels = self.embedding(labels)
-#         input = torch.cat([input, labels], -1)
-#         input = self.merge(input)
-#
-#         return input
